@@ -495,9 +495,59 @@ main{max-width:1200px; margin:0 auto;}
     });
   });
 
+  var SEED_TASKS = {
+    cal_soldadores: { title: "Pasar calificación en Soldadores", area: "Metal Mecánica", status: "pendiente", assignee: null, dependsOn: [] },
+    cert_calib: { title: "Certificados de Calibración de equipos para verificación de equipos de soldadura", area: "Metal Mecánica", status: "pendiente", assignee: null, dependsOn: [] },
+    cert_operatividad: { title: "Certificados de Operatividad de equipos de soldadura", area: "Metal Mecánica", status: "hecho", assignee: null, dependsOn: [] },
+    galga: { title: "Galga de soldadura", area: "Metal Mecánica", status: "pendiente", assignee: null, dependsOn: [] },
+    smaw: { title: "Confirmar que el proceso de soldadura en obra será SMAW", area: "Metal Mecánica", status: "pendiente", assignee: null, dependsOn: [] },
+    capacitacion: { title: "Programar capacitación de personal para montaje de estructuras metálicas (torres, andamios)", area: "Metal Mecánica", status: "pendiente", assignee: null, dependsOn: [] },
+    ensayos_materiales: { title: "Programar ensayos de materiales comprados (fabricación de vigas metálicas y vigas diafragma)", area: "Metal Mecánica", status: "pendiente", assignee: null, dependsOn: [] },
+    d15: { title: "Solicitar procedimientos de soldadura según AWS D1.5 (~10 días de plazo)", area: "Metal Mecánica", status: "pendiente", assignee: null, dependsOn: [] },
+    cal_pintores: { title: "Pasar calificación en Pintores", area: "Pintura", status: "pendiente", assignee: null, dependsOn: [] },
+    equipos_pintura: { title: "Equipos de pintura", area: "Pintura", status: "pendiente", assignee: null, dependsOn: [] },
+    prog_probetas_pintura: { title: "Programación de pruebas de ensayos de probetas de pintura", area: "Pintura", status: "pendiente", assignee: null, dependsOn: [] },
+    conductimetro: { title: "Calificar a Samuel para la prueba de conductímetro (sales)", area: "Pintura", status: "pendiente", assignee: "Samuel", dependsOn: [] },
+    rugosimetro: { title: "Rugósimetro — definir si se alquila o se compra", area: "Pintura", status: "pendiente", assignee: null, dependsOn: [] },
+    kit_homologacion: { title: "Kit de Homologación para pintura (si se trabaja con Aurora)", area: "Pintura", status: "pendiente", assignee: null, dependsOn: [] },
+    camara_niebla: { title: "Cámara de niebla salina — verificar performance del sistema de pintura", area: "Pintura", status: "pendiente", assignee: null, dependsOn: [] },
+    cond_ambientales: { title: "Equipos de condiciones ambientales", area: "Pintura", status: "pendiente", assignee: "Ing. Brenda", dependsOn: [] },
+    sigma: { title: "SIGMA — estudios de niebla salina", area: "Pintura", status: "pendiente", assignee: null, dependsOn: [] },
+    nitratos: { title: "Prueba de nitratos y sulfatos", area: "Pintura", status: "pendiente", assignee: null, dependsOn: [] },
+    ensayos_salinos_eett: { title: "Verificar prueba de ensayos salinos en las EETT", area: "Pintura", status: "pendiente", assignee: null, dependsOn: [] },
+    rotura_probetas: { title: "Rotura de probetas — coordinar con el laboratorio", area: "Obras Civiles", status: "pendiente", assignee: null, dependsOn: [] },
+    memoria_apuntalamiento: { title: "Solicitar memoria de cálculo de torres de apuntalamiento", area: "Estructuras", status: "pendiente", assignee: null, dependsOn: [] },
+    memoria_lanzamiento: { title: "Solicitar memoria de cálculo de torres de lanzamiento", area: "Estructuras", status: "pendiente", assignee: null, dependsOn: [] },
+    memoria_andamios: { title: "Solicitar memoria de cálculo de andamios colgantes", area: "Estructuras", status: "pendiente", assignee: null, dependsOn: [] },
+    planos: { title: "Elaborar planos de apuntalamiento y lanzamiento según la realidad del proyecto", area: "Estructuras", status: "pendiente", assignee: null, dependsOn: ["memoria_apuntalamiento","memoria_lanzamiento"] },
+    plan_lanzamiento: { title: "Plantear el plan de lanzamiento de la estructura metálica", area: "Estructuras", status: "pendiente", assignee: null, dependsOn: ["memoria_lanzamiento"] },
+    cap12_confirmar: { title: "Confirmar que el capítulo 12 no aplica al puente provisional", area: "Estructuras", status: "hecho", assignee: null, dependsOn: [] },
+    aisc_cap12: { title: "Consultar el tema de la AISC y el capítulo 12 correspondiente al puente provisional", area: "Estructuras", status: "hecho", assignee: null, dependsOn: [] },
+    rfi: { title: "Enviar RFI sobre la consulta del puente provisional respecto al capítulo 12", area: "Estructuras", status: "pendiente", assignee: null, dependsOn: [] },
+    respuesta_puente: { title: "Elaborar la respuesta técnica del puente provisional", area: "Estructuras", status: "pendiente", assignee: null, dependsOn: ["rfi"] },
+    seguimiento_acciones: { title: "Enviar acciones a tomar — se realiza la actividad para hacer el levantamiento", area: "Seguimiento", status: "pendiente", assignee: null, dependsOn: [] }
+  };
+
+  function seedIfEmpty(){
+    return db.collection('tasks').limit(1).get().then(function(snap){
+      if (!snap.empty) return;
+      var batch = db.batch();
+      Object.keys(SEED_TASKS).forEach(function(id){
+        var data = SEED_TASKS[id];
+        data.createdAt = new Date().toISOString();
+        var ref = db.collection('tasks').doc(id);
+        batch.set(ref, data);
+      });
+      return batch.commit();
+    }).catch(function(err){
+      showBanner('No se pudo cargar la carga inicial de actividades: ' + (err&&err.message?err.message:'reintenta'), true);
+    });
+  }
+
   function boot(){
     buildLanes();
     render();
+    seedIfEmpty().then(function(){
     db.collection('tasks').onSnapshot(function(snap){
       state.tasks = snap.docs.map(function(d){
         var data = d.data() || {};
@@ -512,6 +562,7 @@ main{max-width:1200px; margin:0 auto;}
       render();
     }, function(err){
       showBanner('Error de sincronización: ' + (err&&err.message?err.message:'desconocido'), true);
+    });
     });
   }
 
