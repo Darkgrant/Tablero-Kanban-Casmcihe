@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tablero de Obra — Puente Provisional</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#f2f4f2;
+  --surface:#ffffff;
+  --surface-2:#eaeee9;
+  --ink:#1a2420;
+  --muted:#5b6862;
+  --line:#d7dcd6;
+  --accent:#c2540e;
+  --accent-ink:#ffffff;
+  --pendiente:#8a94a6;
+  --enproceso:#2a6ebd;
+  --hecho:#2f8f4e;
+  --danger:#c1432c;
+  --metal:#3d6ea5;
+  --pintura:#b5710d;
+  --civiles:#7a6a52;
+  --estructuras:#6a4fa0;
+  --seguimiento:#0f8b8d;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#12171a; --surface:#1b2226; --surface-2:#20282c; --ink:#e7ece9; --muted:#9aa6a0;
+    --line:#2c363a; --accent:#e07a3f; --accent-ink:#1a120a;
+    --pendiente:#8a96a3; --enproceso:#6ba6e8; --hecho:#5bcf85; --danger:#e2685a;
+    --metal:#7fb0e0; --pintura:#e0a24a; --civiles:#b2a488; --estructuras:#ab8fe0; --seguimiento:#4fc7c9;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12171a; --surface:#1b2226; --surface-2:#20282c; --ink:#e7ece9; --muted:#9aa6a0;
+  --line:#2c363a; --accent:#e07a3f; --accent-ink:#1a120a;
+  --pendiente:#8a96a3; --enproceso:#6ba6e8; --hecho:#5bcf85; --danger:#e2685a;
+  --metal:#7fb0e0; --pintura:#e0a24a; --civiles:#b2a488; --estructuras:#ab8fe0; --seguimiento:#4fc7c9;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:'IBM Plex Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  padding:0 16px; padding-block:16px;
+}
+h1,h2,h3{text-wrap:balance; margin:0; font-family:'IBM Plex Sans',sans-serif;}
+.mono{font-family:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;}
+a{color:var(--accent);}
+
+header.top{
+  max-width:1200px; margin:0 auto 18px; display:flex; flex-direction:column; gap:12px;
+}
+.title-row{display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap;}
+.title-row h1{font-size:22px; font-weight:700; letter-spacing:.2px;}
+.title-row .sub{color:var(--muted); font-size:13px; margin-top:2px;}
+.title-block{display:flex; flex-direction:column;}
+
+.btn{
+  border:1px solid var(--line); background:var(--surface); color:var(--ink);
+  border-radius:8px; padding:9px 14px; font-size:13px; font-weight:600; cursor:pointer;
+  font-family:inherit; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;
+}
+.btn:hover{border-color:var(--accent);}
+.btn.primary{background:var(--accent); color:var(--accent-ink); border-color:var(--accent);}
+.btn.ghost{background:transparent; border-color:transparent; padding:6px 8px;}
+.btn.danger-text{color:var(--danger); border-color:color-mix(in srgb, var(--danger) 40%, var(--line)); margin-right:auto;}
+.btn.small{padding:5px 9px; font-size:12px;}
+.btn:disabled{opacity:.35; cursor:not-allowed;}
+
+main{max-width:1200px; margin:0 auto;}
+
+.lane{margin-bottom:22px;}
+.lane-head{
+  display:flex; align-items:center; justify-content:space-between; padding:0 2px 8px;
+  border-bottom:2px solid var(--line); margin-bottom:10px;
+}
+.lane-title{
+  font-size:14.5px; font-weight:700; display:flex; align-items:center; gap:8px; text-transform:uppercase; letter-spacing:.4px;
+}
+.lane-title .dot{width:10px;height:10px;border-radius:3px;background:currentColor;}
+.lane-count{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--muted); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:1px 8px;}
+
+.board{
+  display:grid; grid-template-columns:repeat(3,minmax(220px,1fr)); gap:12px;
+}
+@media (max-width:820px){
+  .board{grid-auto-flow:column; grid-auto-columns:82%; grid-template-columns:none;
+    overflow-x:auto; scroll-snap-type:x mandatory; padding-bottom:6px; margin:0 -16px; padding-inline:16px;}
+  .col{scroll-snap-align:start;}
+}
+.col{
+  background:var(--surface-2); border:1px solid var(--line); border-radius:12px;
+  padding:12px; display:flex; flex-direction:column; gap:10px; min-height:120px;
+}
+.col-head{display:flex; align-items:center; justify-content:space-between; padding:2px 4px;}
+.col-head .name{font-weight:700; font-size:13.5px; display:flex; align-items:center; gap:8px;}
+.col-head .swatch{width:10px;height:10px;border-radius:3px;}
+.col-head .count{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--muted); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:1px 7px;}
+.cards{display:flex; flex-direction:column; gap:9px; min-height:48px; border-radius:8px; transition:background .12s, outline .12s;}
+.cards.drag-over{outline:2px dashed var(--accent); outline-offset:-2px; background:color-mix(in srgb, var(--accent) 10%, transparent);}
+.empty-col{color:var(--muted); font-size:12.5px; text-align:center; padding:14px 6px; border:1px dashed var(--line); border-radius:8px; pointer-events:none;}
+
+.card{
+  background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:11px 12px;
+  display:flex; flex-direction:column; gap:8px; position:relative; cursor:grab;
+}
+.card.dragging{opacity:.4;}
+.card .pill.overdue{color:var(--danger); border-color:color-mix(in srgb, var(--danger) 45%, var(--line));}
+.card .area-chip{
+  font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.5px;
+  display:inline-flex; align-items:center; gap:5px; width:fit-content;
+}
+.card .area-chip .dot{width:7px;height:7px;border-radius:50%;background:currentColor;}
+.card .title{font-size:13.5px; line-height:1.4; font-weight:600;}
+.card .meta{display:flex; flex-wrap:wrap; gap:6px; font-size:11.5px; color:var(--muted);}
+.card .meta .pill{background:var(--surface-2); border:1px solid var(--line); border-radius:6px; padding:2px 7px;}
+.card .blocked{
+  font-size:11px; color:var(--danger); background:color-mix(in srgb, var(--danger) 12%, transparent);
+  border:1px solid color-mix(in srgb, var(--danger) 35%, transparent); border-radius:6px; padding:4px 7px;
+  display:flex; gap:5px; align-items:flex-start;
+}
+.card .row-actions{display:flex; align-items:center; justify-content:space-between; margin-top:2px;}
+.card .move-btns{display:flex; gap:6px;}
+.confirm-del{
+  display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--danger);
+}
+
+.fab{
+  position:fixed; right:20px; bottom:calc(20px + env(safe-area-inset-bottom,0px));
+  border-radius:999px; padding:13px 18px; box-shadow:0 6px 18px rgba(0,0,0,.18);
+  z-index:20;
+}
+
+.modal-backdrop{
+  position:fixed; inset:0; background:rgba(10,14,12,.5); display:flex; align-items:flex-end;
+  justify-content:center; z-index:50; padding:0;
+}
+@media (min-width:640px){ .modal-backdrop{align-items:center; padding:16px;} }
+.modal{
+  background:var(--surface); width:100%; max-width:480px; border-radius:16px 16px 0 0;
+  padding:18px; padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));
+  max-height:88vh; overflow-y:auto; border:1px solid var(--line);
+}
+@media (min-width:640px){ .modal{border-radius:16px;} }
+.modal h2{font-size:16px; margin-bottom:14px;}
+.field{display:flex; flex-direction:column; gap:5px; margin-bottom:12px;}
+.field label{font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.4px;}
+.field input[type=text], .field input[type=date], .field select{
+  border:1px solid var(--line); background:var(--bg); color:var(--ink); border-radius:8px;
+  padding:9px 10px; font-size:14px; font-family:inherit; color-scheme:inherit;
+}
+.field input[type=text]:focus, .field input[type=date]:focus, .field select:focus{outline:2px solid var(--accent); outline-offset:1px;}
+.dep-list{display:flex; flex-direction:column; gap:6px; max-height:160px; overflow-y:auto; border:1px solid var(--line); border-radius:8px; padding:8px; background:var(--bg);}
+.dep-item{display:flex; align-items:center; gap:8px; font-size:12.5px;}
+.dep-item input{margin:0;}
+.modal-actions{display:flex; gap:8px; justify-content:flex-end; margin-top:6px;}
+
+.banner{
+  max-width:1200px; margin:0 auto 14px; background:var(--surface); border:1px solid var(--line);
+  border-radius:10px; padding:10px 14px; font-size:12.5px; color:var(--muted);
+}
+.banner.warn{border-color:color-mix(in srgb, var(--danger) 40%, var(--line)); color:var(--danger);}
+
+[hidden]{display:none !important;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="title-row">
+    <div class="title-block">
+      <h1>Tablero de Obra — Puente Provisional</h1>
+      <div class="sub mono" id="asof">Conectando...</div>
+    </div>
+    <button class="btn primary" id="btnAddTop">+ Nueva actividad</button>
+  </div>
+</header>
+
+<div class="banner" id="statusBanner" hidden></div>
+
+<main id="lanes"></main>
+
+<button class="btn primary fab" id="btnAddFab" title="Nueva actividad">+</button>
+
+<div class="modal-backdrop" id="modalBackdrop" hidden>
+  <div class="modal">
+    <h2 id="modalTitle">Nueva actividad</h2>
+    <form id="taskForm">
+      <input type="hidden" id="f-id" value="">
+      <div class="field">
+        <label for="f-title">Actividad</label>
+        <input type="text" id="f-title" required maxlength="200" placeholder="Ej. Solicitar memoria de cálculo...">
+      </div>
+      <div class="field">
+        <label for="f-area">Área</label>
+        <select id="f-area" required>
+          <option value="Metal Mecánica">Metal Mecánica</option>
+          <option value="Pintura">Pintura</option>
+          <option value="Obras Civiles">Obras Civiles</option>
+          <option value="Estructuras">Estructuras</option>
+          <option value="Seguimiento">Seguimiento</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="f-assignee">Responsable (opcional)</label>
+        <input type="text" id="f-assignee" maxlength="80" placeholder="Ej. Ing. Brenda">
+      </div>
+      <div class="field">
+        <label for="f-due">Fecha límite (opcional)</label>
+        <input type="date" id="f-due">
+      </div>
+      <div class="field">
+        <label>Depende de (opcional)</label>
+        <div class="dep-list" id="depList"><div class="sub" style="color:var(--muted); font-size:12px;">Sin otras actividades aún.</div></div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn danger-text" id="btnDeleteInModal" hidden>Eliminar</button>
+        <button type="button" class="btn" id="btnCancel">Cancelar</button>
+        <button type="submit" class="btn primary" id="btnSubmitTask">Crear</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script>
+(function(){
+  var firebaseConfig = {
+    apiKey: "AIzaSyC_UtZKO5aLrUVKdKTee5zky8UKpRXdLlI",
+    authDomain: "kanban-casmiche.firebaseapp.com",
+    databaseURL: "https://kanban-casmiche-default-rtdb.firebaseio.com",
+    projectId: "kanban-casmiche",
+    storageBucket: "kanban-casmiche.firebasestorage.app",
+    messagingSenderId: "656040870044",
+    appId: "1:656040870044:web:f6070d5b6e7f041816ed59"
+  };
+  firebase.initializeApp(firebaseConfig);
+  var db = firebase.firestore();
+
+  var AREAS_ORDER = ["Estructuras","Pintura","Metal Mecánica","Obras Civiles","Seguimiento"];
+  var AREA_VAR = {"Metal Mecánica":"--metal","Pintura":"--pintura","Obras Civiles":"--civiles","Estructuras":"--estructuras","Seguimiento":"--seguimiento"};
+  var AREA_SLUG = {"Metal Mecánica":"metal","Pintura":"pintura","Obras Civiles":"civiles","Estructuras":"estructuras","Seguimiento":"seguimiento"};
+  var AREAS = AREAS_ORDER;
+  var STATUS_ORDER = ["pendiente","en_proceso","hecho"];
+  var STATUS_LABEL = {pendiente:"Pendiente", en_proceso:"En proceso", hecho:"Hecho"};
+
+  var state = { tasks: [], editingId: null };
+
+  function esc(s){
+    var d = document.createElement('div'); d.textContent = (s==null?'':String(s)); return d.innerHTML;
+  }
+
+  function showBanner(msg, warn){
+    var b = document.getElementById('statusBanner');
+    b.textContent = msg; b.hidden = false; b.classList.toggle('warn', !!warn);
+  }
+  function hideBanner(){ document.getElementById('statusBanner').hidden = true; }
+
+  function buildLanes(){
+    var wrap = document.getElementById('lanes');
+    wrap.innerHTML = AREAS_ORDER.map(function(area){
+      var slug = AREA_SLUG[area];
+      var v = AREA_VAR[area];
+      var cols = STATUS_ORDER.map(function(st){
+        var swatchVar = st==='pendiente' ? '--pendiente' : (st==='en_proceso' ? '--enproceso' : '--hecho');
+        return '<div class="col" data-status="' + st + '">' +
+          '<div class="col-head"><span class="name"><span class="swatch" style="background:var(' + swatchVar + ')"></span>' + STATUS_LABEL[st] + '</span>' +
+          '<span class="count" id="count-' + slug + '-' + st + '">0</span></div>' +
+          '<div class="cards" id="cards-' + slug + '-' + st + '" data-area="' + esc(area) + '" data-status="' + st + '"></div></div>';
+      }).join('');
+      return '<section class="lane" data-area="' + esc(area) + '">' +
+        '<div class="lane-head"><span class="lane-title" style="color:var(' + v + ')"><span class="dot"></span>' + esc(area) + '</span>' +
+        '<span class="lane-count" id="lanecount-' + slug + '">0</span></div>' +
+        '<div class="board">' + cols + '</div>' +
+        '</section>';
+    }).join('');
+
+    AREAS_ORDER.forEach(function(area){
+      var slug = AREA_SLUG[area];
+      STATUS_ORDER.forEach(function(st){
+        var container = document.getElementById('cards-' + slug + '-' + st);
+        container.addEventListener('dragover', function(e){ e.preventDefault(); container.classList.add('drag-over'); });
+        container.addEventListener('dragleave', function(){ container.classList.remove('drag-over'); });
+        container.addEventListener('drop', function(e){
+          e.preventDefault();
+          container.classList.remove('drag-over');
+          var id = e.dataTransfer.getData('text/plain');
+          if (id) moveCardTo(id, area, st);
+        });
+      });
+    });
+  }
+
+  function taskById(id){ return state.tasks.find(function(t){return t.id===id;}); }
+
+  function blockedInfo(task){
+    if (!task.dependsOn || !task.dependsOn.length) return null;
+    var open = task.dependsOn.map(taskById).filter(Boolean).filter(function(d){return d.status!=='hecho';});
+    if (!open.length) return null;
+    return open.map(function(d){return d.title;}).join(', ');
+  }
+
+  function moveStatus(task, dir){
+    var idx = STATUS_ORDER.indexOf(task.status);
+    var next = idx + dir;
+    if (next<0 || next>=STATUS_ORDER.length) return;
+    db.collection('tasks').doc(task.id).update({status: STATUS_ORDER[next]}).catch(function(e){
+      showBanner('No se pudo mover la actividad: ' + (e&&e.message?e.message:'reintenta'), true);
+    });
+  }
+
+  function moveCardTo(id, area, status){
+    var task = taskById(id);
+    if (!task) return;
+    if (task.area===area && task.status===status) return;
+    db.collection('tasks').doc(id).update({area: area, status: status}).catch(function(e){
+      showBanner('No se pudo mover la actividad: ' + (e&&e.message?e.message:'reintenta'), true);
+    });
+  }
+
+  function deleteTask(id){
+    db.collection('tasks').doc(id).delete().catch(function(e){
+      showBanner('No se pudo eliminar: ' + (e&&e.message?e.message:'reintenta'), true);
+    });
+  }
+
+  function formatDate(iso){
+    if (!iso) return '';
+    var p = iso.split('-');
+    if (p.length!==3) return iso;
+    return p[2] + '/' + p[1];
+  }
+  function isOverdue(task){
+    if (!task.dueDate || task.status==='hecho') return false;
+    var today = new Date().toISOString().slice(0,10);
+    return task.dueDate < today;
+  }
+
+  function renderCard(task){
+    var card = document.createElement('div');
+    card.className = 'card';
+    card.draggable = true;
+    var areaVar = AREA_VAR[task.area] || '--muted';
+    var idx = STATUS_ORDER.indexOf(task.status);
+    var blocked = blockedInfo(task);
+    var overdue = isOverdue(task);
+
+    var metaBits = [];
+    if (task.assignee) metaBits.push('<span class="pill">' + esc(task.assignee) + '</span>');
+    if (task.dueDate) metaBits.push('<span class="pill' + (overdue?' overdue':'') + '">' + (overdue?'⚠ ':'') + 'vence ' + esc(formatDate(task.dueDate)) + '</span>');
+    if (task.dependsOn && task.dependsOn.length){
+      var names = task.dependsOn.map(taskById).filter(Boolean).map(function(d){return d.title;});
+      if (names.length) metaBits.push('<span class="pill" title="' + esc(names.join(', ')) + '">depende de ' + names.length + '</span>');
+    }
+
+    card.innerHTML =
+      '<span class="area-chip" style="color:var(' + areaVar + ')"><span class="dot"></span>' + esc(task.area) + '</span>' +
+      '<div class="title">' + esc(task.title) + '</div>' +
+      (metaBits.length ? '<div class="meta">' + metaBits.join('') + '</div>' : '') +
+      (blocked ? '<div class="blocked">⚑ Bloqueada por: ' + esc(blocked) + '</div>' : '') +
+      '<div class="row-actions">' +
+        '<div class="move-btns">' +
+          '<button class="btn small" data-act="prev" ' + (idx<=0?'disabled':'') + ' title="Retroceder">◀</button>' +
+          '<button class="btn small" data-act="next" ' + (idx>=STATUS_ORDER.length-1?'disabled':'') + ' title="Avanzar">▶</button>' +
+        '</div>' +
+        '<div class="move-btns">' +
+          '<button class="btn ghost small" data-act="edit" title="Editar">✎</button>' +
+          '<button class="btn ghost small" data-act="del" title="Eliminar">🗑</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="confirm-del" hidden>¿Eliminar? <button class="btn small" data-act="del-yes">Sí</button><button class="btn small" data-act="del-no">No</button></div>';
+
+    card.addEventListener('dragstart', function(e){
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', task.id);
+    });
+    card.addEventListener('dragend', function(){ card.classList.remove('dragging'); });
+
+    card.querySelector('[data-act="prev"]').addEventListener('click', function(){ moveStatus(task,-1); });
+    card.querySelector('[data-act="next"]').addEventListener('click', function(){ moveStatus(task,1); });
+    card.querySelector('[data-act="edit"]').addEventListener('click', function(){ openModal(task); });
+    card.querySelector('[data-act="del"]').addEventListener('click', function(){
+      card.querySelector('.row-actions').hidden = true;
+      card.querySelector('.confirm-del').hidden = false;
+    });
+    card.querySelector('[data-act="del-no"]').addEventListener('click', function(){
+      card.querySelector('.row-actions').hidden = false;
+      card.querySelector('.confirm-del').hidden = true;
+    });
+    card.querySelector('[data-act="del-yes"]').addEventListener('click', function(){ deleteTask(task.id); });
+    return card;
+  }
+
+  function render(){
+    AREAS_ORDER.forEach(function(area){
+      var slug = AREA_SLUG[area];
+      var areaTasks = state.tasks.filter(function(t){return t.area===area;});
+      document.getElementById('lanecount-' + slug).textContent = areaTasks.length;
+      STATUS_ORDER.forEach(function(st){
+        var list = areaTasks.filter(function(t){return t.status===st;}).sort(function(a,b){return (a.title||'').localeCompare(b.title||'');});
+        var container = document.getElementById('cards-' + slug + '-' + st);
+        container.innerHTML = '';
+        if (!list.length){
+          var e = document.createElement('div'); e.className='empty-col'; e.textContent='Sin actividades';
+          container.appendChild(e);
+        } else {
+          list.forEach(function(t){ container.appendChild(renderCard(t)); });
+        }
+        document.getElementById('count-' + slug + '-' + st).textContent = list.length;
+      });
+    });
+    var backdrop = document.getElementById('modalBackdrop');
+    if (backdrop.hidden){ renderDepList(); }
+  }
+
+  function renderDepList(excludeId, checkedIds){
+    var wrap = document.getElementById('depList');
+    var choices = state.tasks.filter(function(t){return t.id!==excludeId;});
+    if (!choices.length){
+      wrap.innerHTML = '<div style="color:var(--muted); font-size:12px;">Sin otras actividades aún.</div>';
+      return;
+    }
+    var checked = checkedIds || [];
+    wrap.innerHTML = '';
+    choices.slice().sort(function(a,b){return a.area.localeCompare(b.area) || a.title.localeCompare(b.title);}).forEach(function(t){
+      var row = document.createElement('label');
+      row.className = 'dep-item';
+      row.innerHTML = '<input type="checkbox" value="' + t.id + '"' + (checked.indexOf(t.id)>-1?' checked':'') + '> <span>' + esc(t.area) + ' — ' + esc(t.title) + '</span>';
+      wrap.appendChild(row);
+    });
+  }
+
+  function openModal(task){
+    state.editingId = task ? task.id : null;
+    document.getElementById('modalTitle').textContent = task ? 'Editar actividad' : 'Nueva actividad';
+    document.getElementById('btnSubmitTask').textContent = task ? 'Guardar' : 'Crear';
+    document.getElementById('btnDeleteInModal').hidden = !task;
+    document.getElementById('f-id').value = task ? task.id : '';
+    document.getElementById('f-title').value = task ? task.title : '';
+    document.getElementById('f-area').value = task ? task.area : 'Estructuras';
+    document.getElementById('f-assignee').value = task ? (task.assignee||'') : '';
+    document.getElementById('f-due').value = task ? (task.dueDate||'') : '';
+    renderDepList(task ? task.id : null, task ? task.dependsOn : []);
+    document.getElementById('modalBackdrop').hidden = false;
+  }
+  function closeModal(){
+    document.getElementById('modalBackdrop').hidden = true;
+    document.getElementById('taskForm').reset();
+    state.editingId = null;
+  }
+
+  document.getElementById('btnAddTop').addEventListener('click', function(){ openModal(); });
+  document.getElementById('btnAddFab').addEventListener('click', function(){ openModal(); });
+  document.getElementById('btnCancel').addEventListener('click', closeModal);
+  document.getElementById('modalBackdrop').addEventListener('click', function(e){ if (e.target===this) closeModal(); });
+  document.getElementById('btnDeleteInModal').addEventListener('click', function(){
+    if (state.editingId) deleteTask(state.editingId);
+    closeModal();
+  });
+
+  document.getElementById('taskForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var title = document.getElementById('f-title').value.trim();
+    var area = document.getElementById('f-area').value;
+    var assignee = document.getElementById('f-assignee').value.trim();
+    var due = document.getElementById('f-due').value;
+    var deps = Array.prototype.slice.call(document.querySelectorAll('#depList input:checked')).map(function(i){return i.value;});
+    if (!title) return;
+    var submitBtn = document.getElementById('btnSubmitTask');
+    submitBtn.disabled = true;
+    var payload = { title: title, area: area, assignee: assignee || null, dueDate: due || null, dependsOn: deps };
+    var op;
+    if (state.editingId){
+      op = db.collection('tasks').doc(state.editingId).update(payload);
+    } else {
+      payload.status = 'pendiente';
+      payload.createdAt = new Date().toISOString();
+      op = db.collection('tasks').add(payload);
+    }
+    op.then(function(){
+      submitBtn.disabled = false;
+      closeModal();
+    }).catch(function(err){
+      submitBtn.disabled = false;
+      showBanner('No se pudo guardar la actividad: ' + (err&&err.message?err.message:'reintenta'), true);
+    });
+  });
+
+  function boot(){
+    buildLanes();
+    render();
+    db.collection('tasks').onSnapshot(function(snap){
+      state.tasks = snap.docs.map(function(d){
+        var data = d.data() || {};
+        return {
+          id: d.id, title: data.title || '(sin título)', area: AREAS.indexOf(data.area)>-1?data.area:'Estructuras',
+          assignee: data.assignee || '', status: STATUS_ORDER.indexOf(data.status)>-1?data.status:'pendiente',
+          dueDate: data.dueDate || '', dependsOn: Array.isArray(data.dependsOn)?data.dependsOn:[]
+        };
+      });
+      document.getElementById('asof').textContent = 'Actualizado en vivo';
+      hideBanner();
+      render();
+    }, function(err){
+      showBanner('Error de sincronización: ' + (err&&err.message?err.message:'desconocido'), true);
+    });
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
