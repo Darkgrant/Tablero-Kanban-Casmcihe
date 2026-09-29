@@ -230,12 +230,11 @@ main{max-width:1200px; margin:0 auto;}
           <option value="Metal Mecánica">Metal Mecánica</option>
           <option value="Pintura">Pintura</option>
           <option value="Obras Civiles">Obras Civiles</option>
+          <option value="Calidad en Obras Civiles">Calidad en Obras Civiles</option>
           <option value="Estructuras">Estructuras</option>
           <option value="Oficina Técnica">Oficina Técnica</option>
           <option value="Residencia">Residencia</option>
           <option value="Seguridad">Seguridad</option>
-          <option value="Calidad">Calidad</option>
-          <option value="Seguimiento">Seguimiento</option>
         </select>
       </div>
       <div class="field">
@@ -275,13 +274,13 @@ main{max-width:1200px; margin:0 auto;}
   firebase.initializeApp(firebaseConfig);
   var db = firebase.firestore();
 
-  var AREAS_ORDER = ["Estructuras","Pintura","Metal Mecánica","Obras Civiles","Oficina Técnica","Residencia","Seguridad","Calidad","Seguimiento"];
-  var AREA_VAR = {"Metal Mecánica":"--metal","Pintura":"--pintura","Obras Civiles":"--civiles","Estructuras":"--estructuras","Seguimiento":"--seguimiento","Oficina Técnica":"--oficina","Residencia":"--residencia","Seguridad":"--seguridad","Calidad":"--calidad"};
-  var AREA_SLUG = {"Metal Mecánica":"metal","Pintura":"pintura","Obras Civiles":"civiles","Estructuras":"estructuras","Seguimiento":"seguimiento","Oficina Técnica":"oficina","Residencia":"residencia","Seguridad":"seguridad","Calidad":"calidad"};
+  var AREAS_ORDER = ["Estructuras","Pintura","Metal Mecánica","Obras Civiles","Calidad en Obras Civiles","Oficina Técnica","Residencia","Seguridad"];
+  var AREA_VAR = {"Metal Mecánica":"--metal","Pintura":"--pintura","Obras Civiles":"--civiles","Calidad en Obras Civiles":"--calidad","Estructuras":"--estructuras","Oficina Técnica":"--oficina","Residencia":"--residencia","Seguridad":"--seguridad"};
+  var AREA_SLUG = {"Metal Mecánica":"metal","Pintura":"pintura","Obras Civiles":"civiles","Calidad en Obras Civiles":"calidad-civiles","Estructuras":"estructuras","Oficina Técnica":"oficina","Residencia":"residencia","Seguridad":"seguridad"};
   var AREAS = AREAS_ORDER;
   var AREA_GROUPS = [
     { name: "Oficina Técnica y Producción", slug: "grp-oficina-produccion", areas: ["Oficina Técnica","Estructuras","Obras Civiles"] },
-    { name: "Área de Calidad", slug: "grp-calidad", areas: ["Pintura","Metal Mecánica","Obras Civiles","Calidad"] }
+    { name: "Área de Calidad", slug: "grp-calidad", areas: ["Pintura","Metal Mecánica","Calidad en Obras Civiles"] }
   ];
   var STATUS_ORDER = ["pendiente","en_proceso","en_revision","hecho"];
   var STATUS_LABEL = {pendiente:"Pendiente", en_proceso:"En proceso", en_revision:"En Revisión", hecho:"Hecho"};
