@@ -113,6 +113,12 @@ main{max-width:1200px; margin:0 auto;}
 .cards{display:flex; flex-direction:column; gap:9px; min-height:48px; border-radius:8px; transition:background .12s, outline .12s;}
 .cards.drag-over{outline:2px dashed var(--accent); outline-offset:-2px; background:color-mix(in srgb, var(--accent) 10%, transparent);}
 .empty-col{color:var(--muted); font-size:12.5px; text-align:center; padding:14px 6px; border:1px dashed var(--line); border-radius:8px; pointer-events:none;}
+.add-col-btn{
+  width:100%; justify-content:center; border:1px dashed var(--line); background:transparent; color:var(--muted); margin-top:2px;
+}
+.add-col-btn:hover{border-color:var(--accent); color:var(--accent);}
+.lane.collapsed .board{display:none;}
+.lane-toggle{font-size:11px; padding:4px 7px;}
 
 .card{
   background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:11px 12px;
@@ -263,10 +269,33 @@ main{max-width:1200px; margin:0 auto;}
   var STATUS_ORDER = ["pendiente","en_proceso","en_revision","hecho"];
   var STATUS_LABEL = {pendiente:"Pendiente", en_proceso:"En proceso", en_revision:"En Revisión", hecho:"Hecho"};
 
-  var state = { tasks: [], editingId: null };
+  var state = { tasks: [], editingId: null, newTaskStatus: 'pendiente' };
 
   function esc(s){
     var d = document.createElement('div'); d.textContent = (s==null?'':String(s)); return d.innerHTML;
+  }
+
+  function loadCollapsed(){
+    try{
+      var raw = localStorage.getItem('tableroKanbanCollapsedLanes');
+      return raw ? JSON.parse(raw) : {};
+    }catch(e){ return {}; }
+  }
+  function saveCollapsed(set){
+    try{ localStorage.setItem('tableroKanbanCollapsedLanes', JSON.stringify(set)); }catch(e){}
+  }
+  var collapsedLanes = loadCollapsed();
+
+  function getDragAfterElement(container, y){
+    var cards = Array.prototype.slice.call(container.querySelectorAll('.card:not(.dragging)'));
+    return cards.reduce(function(closest, child){
+      var box = child.getBoundingClientRect();
+      var offset = y - box.top - box.height/2;
+      if (offset < 0 && offset > closest.offset){
+        return {offset: offset, element: child};
+      }
+      return closest;
+    }, {offset: -Infinity, element: null}).element;
   }
 
   function showBanner(msg, warn){
@@ -285,11 +314,17 @@ main{max-width:1200px; margin:0 auto;}
         return '<div class="col" data-status="' + st + '">' +
           '<div class="col-head"><span class="name"><span class="swatch" style="background:var(' + swatchVar + ')"></span>' + STATUS_LABEL[st] + '</span>' +
           '<span class="count" id="count-' + slug + '-' + st + '">0</span></div>' +
-          '<div class="cards" id="cards-' + slug + '-' + st + '" data-area="' + esc(area) + '" data-status="' + st + '"></div></div>';
+          '<div class="cards" id="cards-' + slug + '-' + st + '" data-area="' + esc(area) + '" data-status="' + st + '"></div>' +
+          '<button type="button" class="btn ghost small add-col-btn" data-area="' + esc(area) + '" data-status="' + st + '">+ Añadir tarea</button>' +
+          '</div>';
       }).join('');
-      return '<section class="lane" data-area="' + esc(area) + '">' +
+      var isCollapsed = !!collapsedLanes[slug];
+      return '<section class="lane' + (isCollapsed?' collapsed':'') + '" data-area="' + esc(area) + '">' +
         '<div class="lane-head"><span class="lane-title" style="color:var(' + v + ')"><span class="dot"></span>' + esc(area) + '</span>' +
-        '<span class="lane-count" id="lanecount-' + slug + '">0</span></div>' +
+        '<div style="display:flex; align-items:center; gap:8px;">' +
+        '<span class="lane-count" id="lanecount-' + slug + '">0</span>' +
+        '<button type="button" class="btn ghost small lane-toggle" data-slug="' + slug + '" title="Contraer/expandir">' + (isCollapsed?'▸':'▾') + '</button>' +
+        '</div></div>' +
         '<div class="board">' + cols + '</div>' +
         '</section>';
     }).join('');
@@ -298,14 +333,44 @@ main{max-width:1200px; margin:0 auto;}
       var slug = AREA_SLUG[area];
       STATUS_ORDER.forEach(function(st){
         var container = document.getElementById('cards-' + slug + '-' + st);
-        container.addEventListener('dragover', function(e){ e.preventDefault(); container.classList.add('drag-over'); });
+        container.addEventListener('dragover', function(e){
+          e.preventDefault();
+          container.classList.add('drag-over');
+          var dragging = document.querySelector('.card.dragging');
+          if (!dragging) return;
+          var afterEl = getDragAfterElement(container, e.clientY);
+          if (afterEl == null){
+            container.appendChild(dragging);
+          } else if (afterEl !== dragging){
+            container.insertBefore(dragging, afterEl);
+          }
+        });
         container.addEventListener('dragleave', function(){ container.classList.remove('drag-over'); });
         container.addEventListener('drop', function(e){
           e.preventDefault();
           container.classList.remove('drag-over');
           var id = e.dataTransfer.getData('text/plain');
-          if (id) moveCardTo(id, area, st);
+          if (!id) return;
+          var task = taskById(id);
+          if (!task) return;
+          var ids = Array.prototype.slice.call(container.querySelectorAll('.card')).map(function(el){ return el.dataset.id; });
+          persistColumnOrder(area, st, ids, id, task);
         });
+      });
+    });
+
+    Array.prototype.slice.call(document.querySelectorAll('.add-col-btn')).forEach(function(btn){
+      btn.addEventListener('click', function(){ openModal(null, btn.dataset.area, btn.dataset.status); });
+    });
+
+    Array.prototype.slice.call(document.querySelectorAll('.lane-toggle')).forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var slug = btn.dataset.slug;
+        var lane = btn.closest('.lane');
+        var isCollapsed = lane.classList.toggle('collapsed');
+        collapsedLanes[slug] = isCollapsed;
+        saveCollapsed(collapsedLanes);
+        btn.textContent = isCollapsed ? '▸' : '▾';
       });
     });
   }
@@ -323,17 +388,29 @@ main{max-width:1200px; margin:0 auto;}
     var idx = STATUS_ORDER.indexOf(task.status);
     var next = idx + dir;
     if (next<0 || next>=STATUS_ORDER.length) return;
-    db.collection('tasks').doc(task.id).update({status: STATUS_ORDER[next]}).catch(function(e){
+    db.collection('tasks').doc(task.id).update({status: STATUS_ORDER[next], order: Date.now()}).catch(function(e){
       showBanner('No se pudo mover la actividad: ' + (e&&e.message?e.message:'reintenta'), true);
     });
   }
 
-  function moveCardTo(id, area, status){
-    var task = taskById(id);
-    if (!task) return;
-    if (task.area===area && task.status===status) return;
-    db.collection('tasks').doc(id).update({area: area, status: status}).catch(function(e){
-      showBanner('No se pudo mover la actividad: ' + (e&&e.message?e.message:'reintenta'), true);
+  function persistColumnOrder(area, status, orderedIds, movedId, movedTask){
+    var batch = db.batch();
+    var changed = false;
+    if (movedTask.area !== area || movedTask.status !== status){
+      batch.update(db.collection('tasks').doc(movedId), {area: area, status: status});
+      changed = true;
+    }
+    orderedIds.forEach(function(id, i){
+      var t = taskById(id);
+      if (!t) return;
+      if (t.order !== i){
+        batch.update(db.collection('tasks').doc(id), {order: i});
+        changed = true;
+      }
+    });
+    if (!changed) return;
+    batch.commit().catch(function(e){
+      showBanner('No se pudo reordenar: ' + (e&&e.message?e.message:'reintenta'), true);
     });
   }
 
@@ -359,6 +436,7 @@ main{max-width:1200px; margin:0 auto;}
     var card = document.createElement('div');
     card.className = 'card';
     card.draggable = true;
+    card.dataset.id = task.id;
     var areaVar = AREA_VAR[task.area] || '--muted';
     var idx = STATUS_ORDER.indexOf(task.status);
     var blocked = blockedInfo(task);
@@ -417,7 +495,12 @@ main{max-width:1200px; margin:0 auto;}
       var areaTasks = state.tasks.filter(function(t){return t.area===area;});
       document.getElementById('lanecount-' + slug).textContent = areaTasks.length;
       STATUS_ORDER.forEach(function(st){
-        var list = areaTasks.filter(function(t){return t.status===st;}).sort(function(a,b){return (a.title||'').localeCompare(b.title||'');});
+        var list = areaTasks.filter(function(t){return t.status===st;}).sort(function(a,b){
+          var oa = (typeof a.order === 'number') ? a.order : Infinity;
+          var ob = (typeof b.order === 'number') ? b.order : Infinity;
+          if (oa !== ob) return oa - ob;
+          return (a.title||'').localeCompare(b.title||'');
+        });
         var container = document.getElementById('cards-' + slug + '-' + st);
         container.innerHTML = '';
         if (!list.length){
@@ -450,14 +533,15 @@ main{max-width:1200px; margin:0 auto;}
     });
   }
 
-  function openModal(task){
+  function openModal(task, prefillArea, prefillStatus){
     state.editingId = task ? task.id : null;
+    state.newTaskStatus = task ? task.status : (prefillStatus || 'pendiente');
     document.getElementById('modalTitle').textContent = task ? 'Editar actividad' : 'Nueva actividad';
     document.getElementById('btnSubmitTask').textContent = task ? 'Guardar' : 'Crear';
     document.getElementById('btnDeleteInModal').hidden = !task;
     document.getElementById('f-id').value = task ? task.id : '';
     document.getElementById('f-title').value = task ? task.title : '';
-    document.getElementById('f-area').value = task ? task.area : 'Estructuras';
+    document.getElementById('f-area').value = task ? task.area : (prefillArea || 'Estructuras');
     document.getElementById('f-assignee').value = task ? (task.assignee||'') : '';
     document.getElementById('f-due').value = task ? (task.dueDate||'') : '';
     renderDepList(task ? task.id : null, task ? task.dependsOn : []);
@@ -493,7 +577,8 @@ main{max-width:1200px; margin:0 auto;}
     if (state.editingId){
       op = db.collection('tasks').doc(state.editingId).update(payload);
     } else {
-      payload.status = 'pendiente';
+      payload.status = state.newTaskStatus || 'pendiente';
+      payload.order = Date.now();
       payload.createdAt = new Date().toISOString();
       op = db.collection('tasks').add(payload);
     }
@@ -608,7 +693,8 @@ main{max-width:1200px; margin:0 auto;}
         return {
           id: d.id, title: data.title || '(sin título)', area: AREAS.indexOf(data.area)>-1?data.area:'Estructuras',
           assignee: data.assignee || '', status: STATUS_ORDER.indexOf(data.status)>-1?data.status:'pendiente',
-          dueDate: data.dueDate || '', dependsOn: Array.isArray(data.dependsOn)?data.dependsOn:[]
+          dueDate: data.dueDate || '', dependsOn: Array.isArray(data.dependsOn)?data.dependsOn:[],
+          order: (typeof data.order === 'number') ? data.order : null
         };
       });
       document.getElementById('asof').textContent = 'Actualizado en vivo';
