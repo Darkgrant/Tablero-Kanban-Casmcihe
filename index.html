@@ -18,6 +18,7 @@
   --accent-ink:#ffffff;
   --pendiente:#8a94a6;
   --enproceso:#2a6ebd;
+  --enrevision:#a8781a;
   --hecho:#2f8f4e;
   --danger:#c1432c;
   --metal:#3d6ea5;
@@ -25,22 +26,28 @@
   --civiles:#7a6a52;
   --estructuras:#6a4fa0;
   --seguimiento:#0f8b8d;
+  --oficina:#2f6f4f;
+  --residencia:#6b4423;
+  --seguridad:#a83232;
+  --calidad:#8a3f7a;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#12171a; --surface:#1b2226; --surface-2:#20282c; --ink:#e7ece9; --muted:#9aa6a0;
     --line:#2c363a; --accent:#e07a3f; --accent-ink:#1a120a;
-    --pendiente:#8a96a3; --enproceso:#6ba6e8; --hecho:#5bcf85; --danger:#e2685a;
+    --pendiente:#8a96a3; --enproceso:#6ba6e8; --enrevision:#e0b357; --hecho:#5bcf85; --danger:#e2685a;
     --metal:#7fb0e0; --pintura:#e0a24a; --civiles:#b2a488; --estructuras:#ab8fe0; --seguimiento:#4fc7c9;
+    --oficina:#5fb98c; --residencia:#c98a54; --seguridad:#e2685a; --calidad:#c77fc0;
     color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#12171a; --surface:#1b2226; --surface-2:#20282c; --ink:#e7ece9; --muted:#9aa6a0;
   --line:#2c363a; --accent:#e07a3f; --accent-ink:#1a120a;
-  --pendiente:#8a96a3; --enproceso:#6ba6e8; --hecho:#5bcf85; --danger:#e2685a;
+  --pendiente:#8a96a3; --enproceso:#6ba6e8; --enrevision:#e0b357; --hecho:#5bcf85; --danger:#e2685a;
   --metal:#7fb0e0; --pintura:#e0a24a; --civiles:#b2a488; --estructuras:#ab8fe0; --seguimiento:#4fc7c9;
+  --oficina:#5fb98c; --residencia:#c98a54; --seguridad:#e2685a; --calidad:#c77fc0;
   color-scheme:dark;
 }
 *{box-sizing:border-box;}
@@ -88,7 +95,7 @@ main{max-width:1200px; margin:0 auto;}
 .lane-count{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--muted); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:1px 8px;}
 
 .board{
-  display:grid; grid-template-columns:repeat(3,minmax(220px,1fr)); gap:12px;
+  display:grid; grid-template-columns:repeat(4,minmax(200px,1fr)); gap:12px;
 }
 @media (max-width:820px){
   .board{grid-auto-flow:column; grid-auto-columns:82%; grid-template-columns:none;
@@ -205,6 +212,10 @@ main{max-width:1200px; margin:0 auto;}
           <option value="Pintura">Pintura</option>
           <option value="Obras Civiles">Obras Civiles</option>
           <option value="Estructuras">Estructuras</option>
+          <option value="Oficina Técnica">Oficina Técnica</option>
+          <option value="Residencia">Residencia</option>
+          <option value="Seguridad">Seguridad</option>
+          <option value="Calidad">Calidad</option>
           <option value="Seguimiento">Seguimiento</option>
         </select>
       </div>
@@ -245,12 +256,12 @@ main{max-width:1200px; margin:0 auto;}
   firebase.initializeApp(firebaseConfig);
   var db = firebase.firestore();
 
-  var AREAS_ORDER = ["Estructuras","Pintura","Metal Mecánica","Obras Civiles","Seguimiento"];
-  var AREA_VAR = {"Metal Mecánica":"--metal","Pintura":"--pintura","Obras Civiles":"--civiles","Estructuras":"--estructuras","Seguimiento":"--seguimiento"};
-  var AREA_SLUG = {"Metal Mecánica":"metal","Pintura":"pintura","Obras Civiles":"civiles","Estructuras":"estructuras","Seguimiento":"seguimiento"};
+  var AREAS_ORDER = ["Estructuras","Pintura","Metal Mecánica","Obras Civiles","Oficina Técnica","Residencia","Seguridad","Calidad","Seguimiento"];
+  var AREA_VAR = {"Metal Mecánica":"--metal","Pintura":"--pintura","Obras Civiles":"--civiles","Estructuras":"--estructuras","Seguimiento":"--seguimiento","Oficina Técnica":"--oficina","Residencia":"--residencia","Seguridad":"--seguridad","Calidad":"--calidad"};
+  var AREA_SLUG = {"Metal Mecánica":"metal","Pintura":"pintura","Obras Civiles":"civiles","Estructuras":"estructuras","Seguimiento":"seguimiento","Oficina Técnica":"oficina","Residencia":"residencia","Seguridad":"seguridad","Calidad":"calidad"};
   var AREAS = AREAS_ORDER;
-  var STATUS_ORDER = ["pendiente","en_proceso","hecho"];
-  var STATUS_LABEL = {pendiente:"Pendiente", en_proceso:"En proceso", hecho:"Hecho"};
+  var STATUS_ORDER = ["pendiente","en_proceso","en_revision","hecho"];
+  var STATUS_LABEL = {pendiente:"Pendiente", en_proceso:"En proceso", en_revision:"En Revisión", hecho:"Hecho"};
 
   var state = { tasks: [], editingId: null };
 
@@ -270,7 +281,7 @@ main{max-width:1200px; margin:0 auto;}
       var slug = AREA_SLUG[area];
       var v = AREA_VAR[area];
       var cols = STATUS_ORDER.map(function(st){
-        var swatchVar = st==='pendiente' ? '--pendiente' : (st==='en_proceso' ? '--enproceso' : '--hecho');
+        var swatchVar = st==='pendiente' ? '--pendiente' : (st==='en_proceso' ? '--enproceso' : (st==='en_revision' ? '--enrevision' : '--hecho'));
         return '<div class="col" data-status="' + st + '">' +
           '<div class="col-head"><span class="name"><span class="swatch" style="background:var(' + swatchVar + ')"></span>' + STATUS_LABEL[st] + '</span>' +
           '<span class="count" id="count-' + slug + '-' + st + '">0</span></div>' +
@@ -545,50 +556,52 @@ main{max-width:1200px; margin:0 auto;}
   }
 
   var SEED_TASKS_V2 = {
-    v2_cv_organigrama: { title: "Enviar CV Ing. Marocho, CV Ing. Duque, CV Soldadores y Organigrama", area: "Seguimiento", status: "pendiente", assignee: "Oficina Técnica", dueDate: null, dependsOn: [] },
-    v2_plano_replanteo: { title: "Plano de Replanteo con ST", area: "Obras Civiles", status: "pendiente", assignee: "Oficina Técnica, Topografía", dueDate: "2026-10-29", dependsOn: [] },
-    v2_plan_accion_recc: { title: "Plan de acción de trabajadores RECC", area: "Seguimiento", status: "pendiente", assignee: null, dueDate: "2026-10-02", dependsOn: [] },
-    v2_cert_recc: { title: "Certificado RECC de 5 Trabajadores", area: "Seguimiento", status: "pendiente", assignee: "Residencia", dueDate: "2026-10-02", dependsOn: [] },
-    v2_wps: { title: "Procedimientos de Soldadura (WPS)", area: "Metal Mecánica", status: "pendiente", assignee: null, dueDate: null, dependsOn: [] },
-    v2_pozo_tierra_inst: { title: "Instalación de pozo a tierra", area: "Obras Civiles", status: "pendiente", assignee: null, dueDate: "2026-10-02", dependsOn: [] },
-    v2_pozo_tierra_insp: { title: "Inspección de pozo a tierra", area: "Obras Civiles", status: "pendiente", assignee: null, dueDate: "2026-10-03", dependsOn: ["v2_pozo_tierra_inst"] },
-    v2_convocatoria_bridas: { title: "Proceso de convocatoria para las bridas — falta ejecución, votaciones, etc.", area: "Metal Mecánica", status: "pendiente", assignee: null, dueDate: "2026-10-03", dependsOn: [] },
-    v2_plan_contingencia: { title: "Plan de Contingencia", area: "Seguimiento", status: "pendiente", assignee: null, dueDate: "2026-10-03", dependsOn: [] },
-    v2_iperc_subsanar: { title: "Matriz IPERC — subsanar 3 matrices pendientes", area: "Seguimiento", status: "pendiente", assignee: null, dueDate: "2026-10-02", dependsOn: [] },
-    v2_memoria_estructuras_huertas: { title: "Memoria de cálculo de estructuras metálicas", area: "Estructuras", status: "pendiente", assignee: "Ing. Huertas", dueDate: null, dependsOn: [] },
-    v2_instructivo_izaje: { title: "Instructivo para izaje aprobado para traslado de estructuras", area: "Estructuras", status: "pendiente", assignee: null, dueDate: "2026-10-07", dependsOn: [] },
-    v2_taller_maestranza: { title: "Plan de Taller de Maestranza — Seguridad (incluye procedimiento y certificaciones)", area: "Metal Mecánica", status: "pendiente", assignee: null, dueDate: "2026-10-05", dependsOn: [] },
-    v2_banos_quimicos: { title: "Implementación de 2 baños químicos con lavadero de manos", area: "Obras Civiles", status: "pendiente", assignee: null, dueDate: "2026-10-05", dependsOn: [] },
-    v2_residuos_minam: { title: "Certificado de residuos sólidos por MINAM de la empresa que brinda el servicio de baños", area: "Obras Civiles", status: "pendiente", assignee: null, dueDate: "2026-10-05", dependsOn: ["v2_banos_quimicos"] },
-    v2_pintura_ignifuga: { title: "Pintura ignífuga para estructuras de madera en almacén de materiales peligrosos", area: "Pintura", status: "pendiente", assignee: null, dueDate: "2026-10-05", dependsOn: [] },
-    v2_anaqueles_residuos: { title: "Implementación de 3 anaqueles y bandeja antiderrame en almacén de residuos peligrosos", area: "Obras Civiles", status: "pendiente", assignee: null, dueDate: "2026-10-05", dependsOn: [] },
-    v2_trabajos_nocturnos: { title: "Plan de Trabajos Nocturnos — Matriz IPERC y Plano de Iluminación", area: "Seguimiento", status: "pendiente", assignee: null, dueDate: null, dependsOn: [] },
-    v2_plan_calidad_seguridad: { title: "Enviar Plan de Calidad y Seguridad — Compromisos", area: "Seguimiento", status: "pendiente", assignee: null, dueDate: null, dependsOn: [] },
-    v2_nc_obs_resolucion: { title: "Enviar NC y OBS levantadas con Resolución Final adoptada", area: "Seguimiento", status: "pendiente", assignee: null, dueDate: "2026-10-02", dependsOn: [] },
-    v2_comunicacion_ubicacion_fabricacion: { title: "Comunicación por correo sobre cambio de ubicación de fabricación de la estructura metálica", area: "Metal Mecánica", status: "pendiente", assignee: null, dueDate: null, dependsOn: [] }
+    v2_cv_organigrama: { title: "Enviar CV Ing. Marocho, CV Ing. Duque, CV Soldadores y Organigrama", area: "Oficina Técnica", assignee: null, dueDate: null, dependsOn: [] },
+    v2_plano_replanteo: { title: "Plano de Replanteo con Estación Total (ST)", area: "Oficina Técnica", assignee: null, dueDate: "2026-10-29", dependsOn: [] },
+    v2_plan_accion_recc: { title: "Plan de acción de trabajadores RECC", area: "Seguridad", assignee: null, dueDate: "2026-10-02", dependsOn: [] },
+    v2_cert_recc: { title: "Certificado RECC de 5 Trabajadores", area: "Residencia", assignee: null, dueDate: "2026-10-02", dependsOn: [] },
+    v2_wps: { title: "Procedimientos de Soldadura (WPS)", area: "Metal Mecánica", assignee: null, dueDate: null, dependsOn: [] },
+    v2_pozo_tierra_inst: { title: "Instalación de pozo a tierra", area: "Obras Civiles", assignee: null, dueDate: "2026-10-02", dependsOn: [] },
+    v2_pozo_tierra_insp: { title: "Inspección de pozo a tierra", area: "Obras Civiles", assignee: null, dueDate: "2026-10-03", dependsOn: ["v2_pozo_tierra_inst"] },
+    v2_convocatoria_bridas: { title: "Proceso de convocatoria para las bridas — falta ejecución, cotizaciones, etc.", area: "Metal Mecánica", assignee: null, dueDate: "2026-10-03", dependsOn: [] },
+    v2_plan_contingencia: { title: "Plan de Contingencia", area: "Seguridad", assignee: null, dueDate: "2026-10-03", dependsOn: [] },
+    v2_iperc_subsanar: { title: "Matriz IPERC — subsanar 3 matrices pendientes", area: "Seguridad", assignee: null, dueDate: "2026-10-02", dependsOn: [] },
+    v2_memoria_estructuras_huertas: { title: "Memoria de cálculo de estructuras metálicas", area: "Estructuras", assignee: "Ing. Huertas", dueDate: null, dependsOn: [] },
+    v2_instructivo_izaje: { title: "Instructivo para izaje aprobado para traslado de estructuras", area: "Estructuras", assignee: null, dueDate: "2026-10-07", dependsOn: [] },
+    v2_taller_maestranza: { title: "Plan de Taller de Maestranza — Seguridad (incluye procedimiento y certificaciones)", area: "Seguridad", assignee: null, dueDate: "2026-10-05", dependsOn: [] },
+    v2_banos_quimicos: { title: "Implementación de 2 baños químicos con lavadero de manos", area: "Obras Civiles", assignee: null, dueDate: "2026-10-05", dependsOn: [] },
+    v2_residuos_minam: { title: "Certificado de residuos sólidos por MINAM de la empresa que brinda el servicio de baños", area: "Seguridad", assignee: null, dueDate: "2026-10-05", dependsOn: ["v2_banos_quimicos"] },
+    v2_pintura_ignifuga: { title: "Pintura ignífuga para estructuras de madera en almacén de materiales peligrosos", area: "Pintura", assignee: null, dueDate: "2026-10-05", dependsOn: [] },
+    v2_anaqueles_residuos: { title: "Implementación de 3 anaqueles y bandeja antiderrame en almacén de residuos peligrosos", area: "Seguridad", assignee: null, dueDate: "2026-10-05", dependsOn: [] },
+    v2_trabajos_nocturnos: { title: "Plan de Trabajos Nocturnos — Matriz IPERC y Plano de Iluminación", area: "Seguridad", assignee: null, dueDate: null, dependsOn: [] },
+    v2_plan_calidad_seguridad: { title: "Enviar Plan de Calidad y Seguridad — Compromisos", area: "Calidad", assignee: null, dueDate: null, dependsOn: [] },
+    v2_nc_obs_resolucion: { title: "Enviar NC y OBS levantadas con Resolución Final adoptada", area: "Calidad", assignee: null, dueDate: "2026-10-02", dependsOn: [] },
+    v2_comunicacion_ubicacion_fabricacion: { title: "Comunicación por correo sobre cambio de ubicación de fabricación de la estructura metálica", area: "Metal Mecánica", assignee: null, dueDate: null, dependsOn: [] }
   };
 
-  function seedV2IfNeeded(){
-    return db.collection('meta').doc('seedV2').get().then(function(marker){
+  function seedV2Fix(){
+    // Corrige (o crea si aún no existían) las 21 actividades agregadas el 2026-09-29,
+    // usando las áreas correctas (Oficina Técnica, Residencia, Seguridad, Calidad).
+    // merge:true evita pisar el "status" si alguien ya movió alguna tarjeta.
+    return db.collection('meta').doc('seedV2Fix').get().then(function(marker){
       if (marker.exists) return;
       var batch = db.batch();
       Object.keys(SEED_TASKS_V2).forEach(function(id){
         var data = SEED_TASKS_V2[id];
         data.createdAt = new Date().toISOString();
-        var ref = db.collection('tasks').doc(id);
-        batch.set(ref, data);
+        batch.set(db.collection('tasks').doc(id), data, {merge:true});
       });
-      batch.set(db.collection('meta').doc('seedV2'), { done: true, at: new Date().toISOString() });
+      batch.set(db.collection('meta').doc('seedV2Fix'), { done: true, at: new Date().toISOString() });
       return batch.commit();
     }).catch(function(err){
-      showBanner('No se pudo cargar las nuevas actividades: ' + (err&&err.message?err.message:'reintenta'), true);
+      showBanner('No se pudo cargar las actividades nuevas: ' + (err&&err.message?err.message:'reintenta'), true);
     });
   }
 
   function boot(){
     buildLanes();
     render();
-    seedIfEmpty().then(function(){ return seedV2IfNeeded(); }).then(function(){
+    seedIfEmpty().then(function(){ return seedV2Fix(); }).then(function(){
     db.collection('tasks').onSnapshot(function(snap){
       state.tasks = snap.docs.map(function(d){
         var data = d.data() || {};
