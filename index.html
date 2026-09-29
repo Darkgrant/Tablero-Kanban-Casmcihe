@@ -120,6 +120,19 @@ main{max-width:1200px; margin:0 auto;}
 .lane.collapsed .board{display:none;}
 .lane-toggle{font-size:11px; padding:4px 7px;}
 
+.supergroup{
+  border:1px solid var(--line); border-radius:14px; padding:14px 14px 2px;
+  margin-bottom:26px; background:color-mix(in srgb, var(--surface) 45%, transparent);
+}
+.group-head{
+  display:flex; align-items:center; justify-content:space-between; padding:0 2px 10px; margin-bottom:8px;
+  border-bottom:2px solid var(--accent);
+}
+.group-title{font-size:16px; font-weight:800; letter-spacing:.3px; text-transform:uppercase; color:var(--ink);}
+.group-toggle{font-size:12px;}
+.supergroup.collapsed .group-body{display:none;}
+.supergroup .lane:last-child{margin-bottom:14px;}
+
 .card{
   background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:11px 12px;
   display:flex; flex-direction:column; gap:8px; position:relative; cursor:grab;
@@ -266,6 +279,10 @@ main{max-width:1200px; margin:0 auto;}
   var AREA_VAR = {"Metal Mecánica":"--metal","Pintura":"--pintura","Obras Civiles":"--civiles","Estructuras":"--estructuras","Seguimiento":"--seguimiento","Oficina Técnica":"--oficina","Residencia":"--residencia","Seguridad":"--seguridad","Calidad":"--calidad"};
   var AREA_SLUG = {"Metal Mecánica":"metal","Pintura":"pintura","Obras Civiles":"civiles","Estructuras":"estructuras","Seguimiento":"seguimiento","Oficina Técnica":"oficina","Residencia":"residencia","Seguridad":"seguridad","Calidad":"calidad"};
   var AREAS = AREAS_ORDER;
+  var AREA_GROUPS = [
+    { name: "Oficina Técnica y Producción", slug: "grp-oficina-produccion", areas: ["Oficina Técnica","Estructuras","Obras Civiles"] },
+    { name: "Área de Calidad", slug: "grp-calidad", areas: ["Pintura","Metal Mecánica","Obras Civiles","Calidad"] }
+  ];
   var STATUS_ORDER = ["pendiente","en_proceso","en_revision","hecho"];
   var STATUS_LABEL = {pendiente:"Pendiente", en_proceso:"En proceso", en_revision:"En Revisión", hecho:"Hecho"};
 
@@ -304,71 +321,105 @@ main{max-width:1200px; margin:0 auto;}
   }
   function hideBanner(){ document.getElementById('statusBanner').hidden = true; }
 
+  function laneHTML(area){
+    var slug = AREA_SLUG[area];
+    var v = AREA_VAR[area];
+    var cols = STATUS_ORDER.map(function(st){
+      var swatchVar = st==='pendiente' ? '--pendiente' : (st==='en_proceso' ? '--enproceso' : (st==='en_revision' ? '--enrevision' : '--hecho'));
+      return '<div class="col" data-status="' + st + '">' +
+        '<div class="col-head"><span class="name"><span class="swatch" style="background:var(' + swatchVar + ')"></span>' + STATUS_LABEL[st] + '</span>' +
+        '<span class="count" data-count-area="' + esc(area) + '" data-count-status="' + st + '">0</span></div>' +
+        '<div class="cards" data-area="' + esc(area) + '" data-status="' + st + '"></div>' +
+        '<button type="button" class="btn ghost small add-col-btn" data-area="' + esc(area) + '" data-status="' + st + '">+ Añadir tarea</button>' +
+        '</div>';
+    }).join('');
+    var isCollapsed = !!collapsedLanes[slug];
+    return '<section class="lane' + (isCollapsed?' collapsed':'') + '" data-area="' + esc(area) + '">' +
+      '<div class="lane-head"><span class="lane-title" style="color:var(' + v + ')"><span class="dot"></span>' + esc(area) + '</span>' +
+      '<div style="display:flex; align-items:center; gap:8px;">' +
+      '<span class="lane-count" data-lanecount-area="' + esc(area) + '">0</span>' +
+      '<button type="button" class="btn ghost small lane-toggle" data-slug="' + slug + '" title="Contraer/expandir">' + (isCollapsed?'▸':'▾') + '</button>' +
+      '</div></div>' +
+      '<div class="board">' + cols + '</div>' +
+      '</section>';
+  }
+
   function buildLanes(){
     var wrap = document.getElementById('lanes');
-    wrap.innerHTML = AREAS_ORDER.map(function(area){
-      var slug = AREA_SLUG[area];
-      var v = AREA_VAR[area];
-      var cols = STATUS_ORDER.map(function(st){
-        var swatchVar = st==='pendiente' ? '--pendiente' : (st==='en_proceso' ? '--enproceso' : (st==='en_revision' ? '--enrevision' : '--hecho'));
-        return '<div class="col" data-status="' + st + '">' +
-          '<div class="col-head"><span class="name"><span class="swatch" style="background:var(' + swatchVar + ')"></span>' + STATUS_LABEL[st] + '</span>' +
-          '<span class="count" id="count-' + slug + '-' + st + '">0</span></div>' +
-          '<div class="cards" id="cards-' + slug + '-' + st + '" data-area="' + esc(area) + '" data-status="' + st + '"></div>' +
-          '<button type="button" class="btn ghost small add-col-btn" data-area="' + esc(area) + '" data-status="' + st + '">+ Añadir tarea</button>' +
-          '</div>';
-      }).join('');
-      var isCollapsed = !!collapsedLanes[slug];
-      return '<section class="lane' + (isCollapsed?' collapsed':'') + '" data-area="' + esc(area) + '">' +
-        '<div class="lane-head"><span class="lane-title" style="color:var(' + v + ')"><span class="dot"></span>' + esc(area) + '</span>' +
-        '<div style="display:flex; align-items:center; gap:8px;">' +
-        '<span class="lane-count" id="lanecount-' + slug + '">0</span>' +
-        '<button type="button" class="btn ghost small lane-toggle" data-slug="' + slug + '" title="Contraer/expandir">' + (isCollapsed?'▸':'▾') + '</button>' +
-        '</div></div>' +
-        '<div class="board">' + cols + '</div>' +
+    var groupedAreas = {};
+    AREA_GROUPS.forEach(function(g){ g.areas.forEach(function(a){ groupedAreas[a] = true; }); });
+    var standalone = AREAS_ORDER.filter(function(a){ return !groupedAreas[a]; });
+
+    var groupsHTML = AREA_GROUPS.map(function(g){
+      var isCollapsed = !!collapsedLanes[g.slug];
+      var lanesHTML = g.areas.map(laneHTML).join('');
+      return '<section class="supergroup' + (isCollapsed?' collapsed':'') + '" data-group="' + g.slug + '">' +
+        '<div class="group-head">' +
+          '<span class="group-title">' + esc(g.name) + '</span>' +
+          '<button type="button" class="btn ghost small group-toggle" data-gslug="' + g.slug + '" title="Contraer/expandir grupo">' + (isCollapsed?'▸':'▾') + '</button>' +
+        '</div>' +
+        '<div class="group-body">' + lanesHTML + '</div>' +
         '</section>';
     }).join('');
 
-    AREAS_ORDER.forEach(function(area){
-      var slug = AREA_SLUG[area];
-      STATUS_ORDER.forEach(function(st){
-        var container = document.getElementById('cards-' + slug + '-' + st);
-        container.addEventListener('dragover', function(e){
-          e.preventDefault();
-          container.classList.add('drag-over');
-          var dragging = document.querySelector('.card.dragging');
-          if (!dragging) return;
-          var afterEl = getDragAfterElement(container, e.clientY);
-          if (afterEl == null){
-            container.appendChild(dragging);
-          } else if (afterEl !== dragging){
-            container.insertBefore(dragging, afterEl);
-          }
-        });
-        container.addEventListener('dragleave', function(){ container.classList.remove('drag-over'); });
-        container.addEventListener('drop', function(e){
-          e.preventDefault();
-          container.classList.remove('drag-over');
-          var id = e.dataTransfer.getData('text/plain');
-          if (!id) return;
-          var task = taskById(id);
-          if (!task) return;
-          var ids = Array.prototype.slice.call(container.querySelectorAll('.card')).map(function(el){ return el.dataset.id; });
-          persistColumnOrder(area, st, ids, id, task);
+    var standaloneHTML = standalone.map(laneHTML).join('');
+
+    wrap.innerHTML = groupsHTML + standaloneHTML;
+
+    Array.prototype.slice.call(wrap.querySelectorAll('.cards')).forEach(function(container){
+      var area = container.getAttribute('data-area');
+      var st = container.getAttribute('data-status');
+      container.addEventListener('dragover', function(e){
+        e.preventDefault();
+        container.classList.add('drag-over');
+        var dragging = document.querySelector('.card.dragging');
+        if (!dragging) return;
+        var afterEl = getDragAfterElement(container, e.clientY);
+        if (afterEl == null){
+          container.appendChild(dragging);
+        } else if (afterEl !== dragging){
+          container.insertBefore(dragging, afterEl);
+        }
+      });
+      container.addEventListener('dragleave', function(){ container.classList.remove('drag-over'); });
+      container.addEventListener('drop', function(e){
+        e.preventDefault();
+        container.classList.remove('drag-over');
+        var id = e.dataTransfer.getData('text/plain');
+        if (!id) return;
+        var task = taskById(id);
+        if (!task) return;
+        var ids = Array.prototype.slice.call(container.querySelectorAll('.card')).map(function(el){ return el.dataset.id; });
+        persistColumnOrder(area, st, ids, id, task);
+      });
+    });
+
+    Array.prototype.slice.call(wrap.querySelectorAll('.add-col-btn')).forEach(function(btn){
+      btn.addEventListener('click', function(){ openModal(null, btn.dataset.area, btn.dataset.status); });
+    });
+
+    Array.prototype.slice.call(wrap.querySelectorAll('.lane-toggle')).forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var slug = btn.dataset.slug;
+        var nowCollapsed = !collapsedLanes[slug];
+        collapsedLanes[slug] = nowCollapsed;
+        saveCollapsed(collapsedLanes);
+        // Un área puede aparecer en más de un grupo (p.ej. Obras Civiles):
+        // se contraen/expanden todas sus instancias juntas.
+        Array.prototype.slice.call(wrap.querySelectorAll('.lane-toggle[data-slug="' + slug + '"]')).forEach(function(b){
+          var lane = b.closest('.lane');
+          lane.classList.toggle('collapsed', nowCollapsed);
+          b.textContent = nowCollapsed ? '▸' : '▾';
         });
       });
     });
 
-    Array.prototype.slice.call(document.querySelectorAll('.add-col-btn')).forEach(function(btn){
-      btn.addEventListener('click', function(){ openModal(null, btn.dataset.area, btn.dataset.status); });
-    });
-
-    Array.prototype.slice.call(document.querySelectorAll('.lane-toggle')).forEach(function(btn){
+    Array.prototype.slice.call(wrap.querySelectorAll('.group-toggle')).forEach(function(btn){
       btn.addEventListener('click', function(){
-        var slug = btn.dataset.slug;
-        var lane = btn.closest('.lane');
-        var isCollapsed = lane.classList.toggle('collapsed');
-        collapsedLanes[slug] = isCollapsed;
+        var gslug = btn.dataset.gslug;
+        var group = btn.closest('.supergroup');
+        var isCollapsed = group.classList.toggle('collapsed');
+        collapsedLanes[gslug] = isCollapsed;
         saveCollapsed(collapsedLanes);
         btn.textContent = isCollapsed ? '▸' : '▾';
       });
@@ -491,9 +542,10 @@ main{max-width:1200px; margin:0 auto;}
 
   function render(){
     AREAS_ORDER.forEach(function(area){
-      var slug = AREA_SLUG[area];
       var areaTasks = state.tasks.filter(function(t){return t.area===area;});
-      document.getElementById('lanecount-' + slug).textContent = areaTasks.length;
+      Array.prototype.slice.call(document.querySelectorAll('.lane-count[data-lanecount-area="' + CSS.escape(area) + '"]')).forEach(function(el){
+        el.textContent = areaTasks.length;
+      });
       STATUS_ORDER.forEach(function(st){
         var list = areaTasks.filter(function(t){return t.status===st;}).sort(function(a,b){
           var oa = (typeof a.order === 'number') ? a.order : Infinity;
@@ -501,15 +553,21 @@ main{max-width:1200px; margin:0 auto;}
           if (oa !== ob) return oa - ob;
           return (a.title||'').localeCompare(b.title||'');
         });
-        var container = document.getElementById('cards-' + slug + '-' + st);
-        container.innerHTML = '';
-        if (!list.length){
-          var e = document.createElement('div'); e.className='empty-col'; e.textContent='Sin actividades';
-          container.appendChild(e);
-        } else {
-          list.forEach(function(t){ container.appendChild(renderCard(t)); });
-        }
-        document.getElementById('count-' + slug + '-' + st).textContent = list.length;
+        // Un área puede tener más de un contenedor en pantalla (aparece en varios grupos);
+        // se llenan todas las instancias con la misma lista.
+        var containers = document.querySelectorAll('.cards[data-area="' + CSS.escape(area) + '"][data-status="' + st + '"]');
+        Array.prototype.slice.call(containers).forEach(function(container){
+          container.innerHTML = '';
+          if (!list.length){
+            var e = document.createElement('div'); e.className='empty-col'; e.textContent='Sin actividades';
+            container.appendChild(e);
+          } else {
+            list.forEach(function(t){ container.appendChild(renderCard(t)); });
+          }
+        });
+        Array.prototype.slice.call(document.querySelectorAll('.count[data-count-area="' + CSS.escape(area) + '"][data-count-status="' + st + '"]')).forEach(function(el){
+          el.textContent = list.length;
+        });
       });
     });
     var backdrop = document.getElementById('modalBackdrop');
